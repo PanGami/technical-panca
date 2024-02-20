@@ -23,7 +23,7 @@ func ConnectRedis(config *Config) {
 		panic(err)
 	}
 
-	err := RedisClient.Set(ctx, "test", "How to Refresh Access Tokens the Right Way in Golang", 0).Err()
+	err := RedisClient.Set(ctx, "test", "✅ Redis client connected successfully...", 0).Err()
 	if err != nil {
 		panic(err)
 	}
