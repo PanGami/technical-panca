@@ -5,6 +5,7 @@ import (
 	"github.com/PanGami/technical-panca/middleware"
 	"github.com/PanGami/technical-panca/models"
 	"github.com/gofiber/fiber/v2"
+	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 )
 
@@ -44,7 +45,18 @@ func GetCartItems(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": result.Error.Error()})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "data": cartItems})
+	totalPrice := 0.0
+	for _, item := range cartItems {
+		totalPrice += calculateTotalPrice(item.ProductID, item.Quantity)
+	}
+
+	response := fiber.Map{
+		"status":     "success",
+		"data":       cartItems,
+		"totalPrice": totalPrice,
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 func DeleteCartItem(c *fiber.Ctx) error {
@@ -73,4 +85,17 @@ func Checkout(c *fiber.Ctx) error {
 	// Implement your checkout logic here, e.g., processing payment, updating inventory, etc.
 	// For simplicity, we'll just return a success message.
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "Checkout successful"})
+}
+
+// Helper Functions
+func calculateTotalPrice(productID *uuid.UUID, quantity int) float64 {
+	var product models.Product
+
+	result := initializers.DB.First(&product, "id = ?", productID)
+	if result.Error != nil {
+		// Handle error if product is not found
+		return 0.0
+	}
+
+	return float64(quantity) * product.Price
 }
