@@ -28,6 +28,7 @@ func CreateProduct(c *fiber.Ctx) error {
 		Description: payload.Description,
 		Price:       payload.Price,
 		Stock:       payload.Stock,
+		Category:    payload.Category,
 	}
 
 	result := initializers.DB.Create(&newProduct)
@@ -103,6 +104,9 @@ func UpdateProduct(c *fiber.Ctx) error {
 	if payload.Price != nil {
 		existingProduct.Price = *payload.Price
 	}
+	if payload.Category != nil {
+		existingProduct.Category = *payload.Category
+	}
 	if payload.Stock != nil {
 		existingProduct.Stock = *payload.Stock
 	}
@@ -137,4 +141,18 @@ func DeleteProduct(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "Product deleted successfully"})
+}
+
+func GetProductsByCategory(c *fiber.Ctx) error {
+	category := c.Query("category")
+
+	var products []models.Product
+
+	result := initializers.DB.Where("category = ?", category).Find(&products)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": result.Error.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "data": products})
 }

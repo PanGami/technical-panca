@@ -12,6 +12,7 @@ type Product struct {
 	Description string     `gorm:"type:text"`
 	Price       float64    `gorm:"not null"`
 	Stock       int        `gorm:"not null"`
+	Category    string     `gorm:"type:varchar(255);not null"`
 	CreatedAt   *time.Time `gorm:"not null;default:now()"`
 	UpdatedAt   *time.Time `gorm:"not null;default:now()"`
 }
@@ -21,6 +22,7 @@ type CreateProductInput struct {
 	Description string  `gorm:"type:text"`
 	Price       float64 `gorm:"not null"`
 	Stock       int     `gorm:"not null"`
+	Category    string  `gorm:"type:varchar(255);not null"`
 }
 
 // Can be nullable because its for update method
@@ -29,4 +31,5 @@ type UpdateProductInput struct {
 	Description *string  `json:"description,omitempty"`
 	Price       *float64 `json:"price,omitempty"`
 	Stock       *int     `json:"stock,omitempty"`
+	Category    *string  `json:"category,omitempty"`
 }
