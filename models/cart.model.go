@@ -30,6 +30,11 @@ type CartItemInput struct {
 	Quantity  int        `gorm:"not null;default:1"`
 }
 
+type CartCheckoutInput struct {
+	UserID string `json:"user_id"`
+	Money  int    `json:"money"`
+}
+
 func FilterCartRecord(cart *Cart) CartResponse {
 	return CartResponse{
 		ID:        *cart.ID,

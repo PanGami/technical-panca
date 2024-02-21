@@ -82,8 +82,64 @@ func DeleteCartItem(c *fiber.Ctx) error {
 }
 
 func Checkout(c *fiber.Ctx) error {
-	// Implement your checkout logic here, e.g., processing payment, updating inventory, etc.
-	// For simplicity, we'll just return a success message.
+
+	var payload *models.CartCheckoutInput
+
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Invalid request payload"})
+	}
+
+	var cartItems []models.Cart
+
+	result := initializers.DB.Where("user_id = ?", payload.UserID).Find(&cartItems)
+	if result.Error != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": result.Error.Error()})
+	}
+
+	totalPrice := 0.0
+	for _, item := range cartItems {
+		totalPrice += calculateTotalPrice(item.ProductID, item.Quantity)
+	}
+
+	if float64(payload.Money) < totalPrice {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Insufficient funds"})
+	}
+
+	tx := initializers.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, item := range cartItems {
+		var product models.Product
+		pResult := tx.First(&product, "id = ?", item.ProductID)
+		if pResult.Error != nil {
+			tx.Rollback()
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": pResult.Error.Error()})
+		}
+
+		if product.Stock < item.Quantity {
+			tx.Rollback()
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Insufficient stock"})
+		}
+
+		product.Stock -= item.Quantity
+		pUpdateResult := tx.Save(&product)
+		if pUpdateResult.Error != nil {
+			tx.Rollback()
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": pUpdateResult.Error.Error()})
+		}
+	}
+
+	tx.Commit()
+
+	// Clear the cart after payment successful
+	if err := clearCart(payload.UserID); err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "fail", "message": err.Error()})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "Checkout successful"})
 }
 
@@ -98,4 +154,12 @@ func calculateTotalPrice(productID *uuid.UUID, quantity int) float64 {
 	}
 
 	return float64(quantity) * product.Price
+}
+
+func clearCart(userID string) error {
+	result := initializers.DB.Delete(&models.Cart{}, "user_id = ?", userID)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
