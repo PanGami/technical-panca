@@ -35,6 +35,7 @@ func main() {
 
 	routes.AuthRoutes(micro)
 	routes.UserRoutes(micro)
+	routes.ProductRoutes(micro)
 	routes.ConnRoute(micro)
 
 	// Default route
